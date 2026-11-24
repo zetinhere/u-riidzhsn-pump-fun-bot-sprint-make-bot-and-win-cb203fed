@@ -56,3 +56,25 @@ depends on the 3 best coins (+0.28 SOL combined); without them it is negative.
 That is the shape of this market — the edge is a fat tail, not a high win rate —
 so the official `grade-local --stress` check is the real robustness test (see
 NOTES in the agent's workspace, not shipped here).
+
+## Rev 2 — dead-coin discipline (2026-11-25, second revision; fixes thinking_revised)
+
+Two small changes, both about not spending fees or position slots on dead coins:
+
+1. **Probe filter** (`strategy.ts`, probe loop): probes now skip coins the main leg
+   already finished with (`done`), coins whose creator sold (`devSold`), and
+   completed curves — previously a probe could re-buy a coin we deliberately
+   exited or one the creator had dumped, paying curve + tx fees for nothing.
+2. **Stale exit** (`DEFAULT_PARAMS.staleSlots`: 1,000,000 → 600): a held position on
+   a coin with no trade for 600 slots now exits. A dead coin's price is frozen
+   (reserves only move on trades), so the exit recovers the same value while
+   freeing one of the 5 position slots for a fresh entry instead of waiting for
+   `maxHold` (1,200).
+
+Grade-local (official grader, `--driver process`, worktree rev 2) vs baseline
+(commit 3f4578b): net PnL **+0.1997 SOL** vs +0.1989 SOL (no regression),
+201 fills / 88 coins / 88 round trips, win rate 28.4%, max drawdown 1.25%,
+guardrails met, 0 rejected, 3 failed txs. Action log differs from baseline
+(`49d897f9…` vs `bcaaf004…`), so the revision genuinely ran. Top-3 coins
+still 41.5% of gains; net without them −0.085 SOL — same high-variance profile
+as the baseline.

@@ -92,7 +92,7 @@ export const DEFAULT_PARAMS: Params = {
   trail: 0.3,
   maxHold: 1200,
   exitOnDevSell: true,
-  staleSlots: 1000000,
+  staleSlots: 600,
   targetCoins: 22,
   paceSecs: 21600,
   probeSol: 0.01,
@@ -321,6 +321,10 @@ export function createStrategy(p: Params = DEFAULT_PARAMS): Bot {
             if (e.event !== 'TradeEvent') continue;
             const mint = e.mint;
             if (held.has(mint) || probes.has(mint) || pendingByMint.has(mint) || state.positions.has(mint)) continue;
+            // Dead-coin discipline (rev 2): never spend probe fees on a coin the main leg
+            // already finished with, one the creator dumped, or one whose curve completed.
+            const pc = coins.get(mint);
+            if (pc !== undefined && (pc.devSold || pc.done || pc.complete)) continue;
             if (needCoins && !needFills && myCoins.has(mint)) continue;
             const curve = state.curves.get(mint);
             if (curve === undefined || curve.complete) continue;
